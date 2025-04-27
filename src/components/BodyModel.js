@@ -2,9 +2,9 @@ import { useGLTF, Html } from '@react-three/drei';
 import { Suspense, useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-function Model({ setError, onPartClick }) {
+function Model({ setError, onPartClick, selectedParts }) {
   const [model, setModel] = useState(null);
-  const [highlightedMesh, setHighlightedMesh] = useState(null);
+  const [highlightedMeshes, setHighlightedMeshes] = useState(new Set());
   const originalMaterials = useRef(new Map());
 
   useEffect(() => {
@@ -53,21 +53,32 @@ function Model({ setError, onPartClick }) {
     loadModel();
   }, [setError]);
 
+  useEffect(() => {
+    if (!model) return;
+
+    const newHighlightedMeshes = new Set();
+    model.scene.traverse((child) => {
+      if (child.isMesh) {
+        const isSelected = selectedParts.includes(child.name);
+        if (isSelected) {
+          child.material = new THREE.MeshStandardMaterial({ color: 0x006400 });
+          newHighlightedMeshes.add(child);
+        } else {
+          const originalMaterial = originalMaterials.current.get(child);
+          if (originalMaterial) {
+            child.material = originalMaterial;
+          }
+        }
+      }
+    });
+    setHighlightedMeshes(newHighlightedMeshes);
+  }, [selectedParts, model]);
+
   const handleMeshClick = (e) => {
     e.stopPropagation();
     const mesh = e.object;
     if (mesh.isMesh && mesh.name) {
       console.log('Part clicked:', mesh.name);
-      // Restore previous mesh's material
-      if (highlightedMesh && highlightedMesh !== mesh) {
-        const originalMaterial = originalMaterials.current.get(highlightedMesh);
-        if (originalMaterial) {
-          highlightedMesh.material = originalMaterial;
-        }
-      }
-      // Highlight new mesh with darker green
-      mesh.material = new THREE.MeshStandardMaterial({ color: 0x006400 });
-      setHighlightedMesh(mesh);
       onPartClick(mesh.name);
     }
   };
@@ -92,7 +103,7 @@ function Model({ setError, onPartClick }) {
   );
 }
 
-export default function BodyModel({ onPartClick }) {
+export default function BodyModel({ onPartClick, selectedParts }) {
   const [error, setError] = useState(null);
 
   return (
@@ -113,7 +124,7 @@ export default function BodyModel({ onPartClick }) {
           </div>
         </Html>
       ) : (
-        <Model setError={setError} onPartClick={onPartClick} />
+        <Model setError={setError} onPartClick={onPartClick} selectedParts={selectedParts} />
       )}
     </Suspense>
   );

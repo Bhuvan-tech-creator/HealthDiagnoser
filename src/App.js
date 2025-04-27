@@ -4,28 +4,51 @@ import { Canvas } from '@react-three/fiber';
 import { Environment, OrbitControls } from '@react-three/drei';
 import BodyModel from './components/BodyModel';
 import DiagnosisPage from './components/DiagnosisPage';
+import FeedbackPage from './components/FeedbackPage';
 import './styles.css';
 
 function Home() {
-  const [selectedPart, setSelectedPart] = useState('');
+  const [selectedParts, setSelectedParts] = useState([]);
   const [painType, setPainType] = useState('');
   const [duration, setDuration] = useState('');
+  const [severity, setSeverity] = useState(1);
   const [additional, setAdditional] = useState('');
   const [extraDetails, setExtraDetails] = useState('');
+  const [medicalHistory, setMedicalHistory] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
+  const [followUpAnswer, setFollowUpAnswer] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
   const canvasRef = useRef();
 
+  useEffect(() => {
+    if (isLoading) {
+      const interval = setInterval(() => {
+        setProgress((prev) => (prev >= 90 ? 90 : prev + 10));
+      }, 300);
+      return () => clearInterval(interval);
+    } else {
+      setProgress(0);
+    }
+  }, [isLoading]);
+
   const handlePartClick = (partName) => {
-    console.log('Part selected:', partName);
-    setSelectedPart(partName);
+    setSelectedParts((prev) => {
+      if (prev.includes(partName)) {
+        return prev.filter((part) => part !== partName);
+      } else {
+        return [...prev, partName];
+      }
+    });
     setError(null);
   };
 
   const handleNext = async () => {
-    if (!selectedPart) {
-      setError('Please select a body part.');
+    if (selectedParts.length === 0) {
+      setError('Please select at least one body part.');
       return;
     }
 
@@ -34,11 +57,16 @@ function Home() {
 
     try {
       const payload = {
-        location: selectedPart,
+        locations: selectedParts,
         painType: painType || 'unspecified',
         duration: duration || 'unknown',
+        severity: severity || 1,
         additional: additional || 'none',
         extraDetails: extraDetails || 'none',
+        medicalHistory: medicalHistory || 'none',
+        age: age || 'unspecified',
+        gender: gender || 'unspecified',
+        followUpAnswer: followUpAnswer || 'unspecified',
       };
       console.log('Sending diagnosis request:', payload);
       const response = await fetch('http://localhost:5000/diagnose', {
@@ -61,6 +89,7 @@ function Home() {
       }
 
       console.log('Diagnosis received:', data);
+      setProgress(100);
       navigate('/diagnosis', { state: { diagnosis: data.diagnosis, recommendations: data.recommendations } });
     } catch (err) {
       console.error('Diagnosis error:', err);
@@ -71,9 +100,9 @@ function Home() {
   };
 
   return (
-    <div className="flex flex-row w-screen h-screen bg-gray-100">
-      <div className="w-3/5 h-full border-2 border-gray-300 rounded-lg m-4">
-        <div className="text-center text-gray-600 font-medium mt-2">BODY</div>
+    <div className="flex flex-row w-screen h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="w-2/5 h-full border-2 border-gray-200 rounded-lg m-2 shadow-sm">
+        <div className="text-center text-gray-700 font-semibold text-lg mt-1">BODY</div>
         <Canvas
           ref={canvasRef}
           camera={{ position: [0, 0, 10], fov: 50, near: 0.1, far: 100 }}
@@ -85,7 +114,7 @@ function Home() {
           <ambientLight intensity={0.8} />
           <directionalLight position={[10, 10, 10]} intensity={1.5} castShadow />
           <Environment preset="studio" />
-          <BodyModel onPartClick={handlePartClick} />
+          <BodyModel onPartClick={handlePartClick} selectedParts={selectedParts} />
           <OrbitControls
             enableZoom={true}
             enablePan={false}
@@ -96,67 +125,137 @@ function Home() {
           />
         </Canvas>
       </div>
-      <div className="w-2/5 p-6 m-4 border-2 border-gray-300 rounded-lg flex flex-col space-y-4">
-        <div className="text-gray-600 font-medium">Click on pain points</div>
-        <label className="block">
-          <span className="text-gray-600 font-medium">Body Part</span>
-          <input
-            type="text"
-            value={selectedPart.replace(/_/g, ' ')}
-            readOnly
-            placeholder="Click model to select"
-            className="mt-2 w-full p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
-          />
-        </label>
-        <label className="block">
-          <span className="text-gray-600 font-medium">Pain Type</span>
-          <input
-            type="text"
-            value={painType}
-            onChange={(e) => setPainType(e.target.value)}
-            placeholder="e.g., sharp, dull"
-            className="mt-2 w-full p-3 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
-          />
-        </label>
-        <label className="block">
-          <span className="text-gray-600 font-medium">Duration</span>
-          <input
-            type="text"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            placeholder="e.g., 2 days"
-            className="mt-2 w-full p-3 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
-          />
-        </label>
-        <label className="block">
-          <span className="text-gray-600 font-medium">Additional Symptoms</span>
-          <input
-            type="text"
-            value={additional}
-            onChange={(e) => setAdditional(e.target.value)}
-            placeholder="e.g., swelling"
-            className="mt-2 w-full p-3 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
-          />
-        </label>
-        <label className="block">
-          <span className="text-gray-600 font-medium">Extra details (symptoms)</span>
-          <textarea
-            value={extraDetails}
-            onChange={(e) => setExtraDetails(e.target.value)}
-            placeholder="e.g., swelling, redness"
-            className="mt-2 w-full p-3 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition h-16 resize-none"
-          />
-        </label>
+      <div className="w-3/5 p-4 m-2 border-2 border-gray-200 rounded-lg flex flex-col space-y-2 shadow-sm">
+        <div className="text-gray-700 font-semibold text-lg">Click on pain points</div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-gray-700 font-medium text-sm">Body Parts</span>
+            <input
+              type="text"
+              value={selectedParts.map(part => part.replace(/_/g, ' ')).join(', ')}
+              readOnly
+              placeholder="Click model to select"
+              className="mt-1 w-full p-1.5 border border-gray-200 rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
+            />
+          </label>
+          <label className="block">
+            <span className="text-gray-700 font-medium text-sm">Pain Type</span>
+            <input
+              type="text"
+              value={painType}
+              onChange={(e) => setPainType(e.target.value)}
+              placeholder="e.g., sharp, dull"
+              className="mt-1 w-full p-1.5 border border-gray-200 rounded-md text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
+            />
+          </label>
+          <label className="block">
+            <span className="text-gray-700 font-medium text-sm">Duration</span>
+            <input
+              type="text"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              placeholder="e.g., 2 days"
+              className="mt-1 w-full p-1.5 border border-gray-200 rounded-md text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
+            />
+          </label>
+          <label className="block">
+            <span className="text-gray-700 font-medium text-sm">Pain Severity (1-10)</span>
+            <div className="flex items-center mt-1">
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={severity}
+                onChange={(e) => setSeverity(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="ml-3 text-gray-700 font-medium text-sm">{severity}</span>
+            </div>
+          </label>
+          <label className="block">
+            <span className="text-gray-700 font-medium text-sm">Age</span>
+            <input
+              type="number"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="e.g., 30"
+              className="mt-1 w-full p-1.5 border border-gray-200 rounded-md text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
+            />
+          </label>
+          <label className="block">
+            <span className="text-gray-700 font-medium text-sm">Gender</span>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="mt-1 w-full p-1.5 border border-gray-200 rounded-md text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
+            >
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          {selectedParts.length > 0 && (
+            <label className="block">
+              <span className="text-gray-700 font-medium text-sm">Does the pain worsen with movement?</span>
+              <select
+                value={followUpAnswer}
+                onChange={(e) => setFollowUpAnswer(e.target.value)}
+                className="mt-1 w-full p-1.5 border border-gray-200 rounded-md text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
+              >
+                <option value="">Select an option</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+          )}
+          <label className="block">
+            <span className="text-gray-700 font-medium text-sm">Additional Symptoms</span>
+            <input
+              type="text"
+              value={additional}
+              onChange={(e) => setAdditional(e.target.value)}
+              placeholder="e.g., swelling"
+              className="mt-1 w-full p-1.5 border border-gray-200 rounded-md text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
+            />
+          </label>
+          <label className="block">
+            <span className="text-gray-700 font-medium text-sm">Extra Details</span>
+            <textarea
+              value={extraDetails}
+              onChange={(e) => setExtraDetails(e.target.value)}
+              placeholder="e.g., swelling, redness"
+              className="mt-1 w-full p-1.5 border border-gray-200 rounded-md text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 h-10 resize-none shadow-sm"
+            />
+          </label>
+          <label className="block">
+            <span className="text-gray-700 font-medium text-sm">Medical History</span>
+            <textarea
+              value={medicalHistory}
+              onChange={(e) => setMedicalHistory(e.target.value)}
+              placeholder="e.g., previous injuries, chronic conditions"
+              className="mt-1 w-full p-1.5 border border-gray-200 rounded-md text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 h-10 resize-none shadow-sm"
+            />
+          </label>
+        </div>
+        {isLoading && (
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        )}
         <button
           onClick={handleNext}
           disabled={isLoading}
-          className={`w-full p-3 mt-4 text-white rounded-lg font-medium transition-all duration-300 ${
-            isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
+          className={`w-full p-2 mt-2 text-white rounded-md font-medium transition-all duration-300 shadow-sm ${
+            isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 hover:shadow-md'
           }`}
         >
           {isLoading ? 'Loading...' : 'Next'}
         </button>
-        {error && <p className="mt-2 text-red-600 font-medium">{error}</p>}
+        {error && <p className="mt-1 text-red-600 font-medium text-sm">{error}</p>}
       </div>
     </div>
   );
@@ -168,6 +267,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/diagnosis" element={<DiagnosisPage />} />
+        <Route path="/feedback" element={<FeedbackPage />} />
       </Routes>
     </Router>
   );
