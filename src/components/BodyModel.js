@@ -22,12 +22,15 @@ function Model({ setError, onPartClick }) {
         console.log('Model loaded:', gltf);
         console.log('Scene children:', gltf.scene.children.map(child => child.name));
 
-        // Center the model
+        // Apply scale first
+        gltf.scene.scale.set(3, 3, 3); // Adjusted for visibility
+        gltf.scene.rotation.set(0, 0, 0);
+
+        // Center the model after scaling
         const box = new THREE.Box3().setFromObject(gltf.scene);
         const center = box.getCenter(new THREE.Vector3());
-        gltf.scene.position.sub(center); // Center the model at origin
-        gltf.scene.scale.set(4, 4, 4); // Adjust scale for visibility
-        gltf.scene.rotation.set(0, 0, 0);
+        gltf.scene.position.sub(center); // Center at origin
+        console.log('Model bounding box after centering:', box);
 
         gltf.scene.traverse((child) => {
           if (child.isMesh) {
@@ -62,8 +65,8 @@ function Model({ setError, onPartClick }) {
           highlightedMesh.material = originalMaterial;
         }
       }
-      // Highlight new mesh
-      mesh.material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+      // Highlight new mesh with darker green
+      mesh.material = new THREE.MeshStandardMaterial({ color: 0x006400 });
       setHighlightedMesh(mesh);
       onPartClick(mesh.name);
     }
@@ -105,7 +108,7 @@ export default function BodyModel({ onPartClick }) {
               <li>File is a valid GLB format (binary, not UTF-8)</li>
               <li>Server is running on localhost:3000</li>
               <li>No network issues (e.g., firewall, VPN)</li>
-              <li>File size is reasonable (e.g., &lt;10MB)</li>
+              <li>{'File size is reasonable (e.g., <10MB)'}</li>
             </ol>
           </div>
         </Html>

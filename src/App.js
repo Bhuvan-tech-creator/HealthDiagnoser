@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { Environment, OrbitControls } from '@react-three/drei';
@@ -11,9 +11,11 @@ function Home() {
   const [painType, setPainType] = useState('');
   const [duration, setDuration] = useState('');
   const [additional, setAdditional] = useState('');
+  const [extraDetails, setExtraDetails] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const canvasRef = useRef();
 
   const handlePartClick = (partName) => {
     console.log('Part selected:', partName);
@@ -21,7 +23,7 @@ function Home() {
     setError(null);
   };
 
-  const handleGetDiagnosis = async () => {
+  const handleNext = async () => {
     if (!selectedPart) {
       setError('Please select a body part.');
       return;
@@ -36,6 +38,7 @@ function Home() {
         painType: painType || 'unspecified',
         duration: duration || 'unknown',
         additional: additional || 'none',
+        extraDetails: extraDetails || 'none',
       };
       console.log('Sending diagnosis request:', payload);
       const response = await fetch('http://localhost:5000/diagnose', {
@@ -68,79 +71,92 @@ function Home() {
   };
 
   return (
-    <div className="flex flex-row w-screen h-screen bg-gradient-to-br from-blue-50 to-gray-100">
-      <div className="w-3/5 h-full">
+    <div className="flex flex-row w-screen h-screen bg-gray-100">
+      <div className="w-3/5 h-full border-2 border-gray-300 rounded-lg m-4">
+        <div className="text-center text-gray-600 font-medium mt-2">BODY</div>
         <Canvas
-          camera={{ position: [0, 0, 5], fov: 50, near: 0.1, far: 100 }}
+          ref={canvasRef}
+          camera={{ position: [0, 0, 10], fov: 50, near: 0.1, far: 100 }}
           gl={{ antialias: true }}
           shadows
           onCreated={() => console.log('Canvas initialized')}
         >
           <color attach="background" args={['#808080']} />
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[10, 10, 10]} intensity={1.8} castShadow />
-          <Environment preset="city" />
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[10, 10, 10]} intensity={1.5} castShadow />
+          <Environment preset="studio" />
           <BodyModel onPartClick={handlePartClick} />
           <OrbitControls
             enableZoom={true}
             enablePan={false}
             enableRotate={true}
             target={[0, 0, 0]}
+            minDistance={2}
+            maxDistance={15}
           />
         </Canvas>
       </div>
-      <div className="w-2/5 p-6 bg-white shadow-xl rounded-l-2xl">
-        <h2 className="text-2xl font-bold text-blue-800 mb-6">Medical Diagnosis Tool</h2>
-        <div className="space-y-4">
-          <label className="block">
-            <span className="text-gray-700 font-medium">Body Part</span>
-            <input
-              type="text"
-              value={selectedPart.replace(/_/g, ' ')}
-              readOnly
-              placeholder="Click model to select"
-              className="mt-1 w-full p-2 border border-gray-300 rounded-md bg-gray-50"
-            />
-          </label>
-          <label className="block">
-            <span className="text-gray-700 font-medium">Pain Type</span>
-            <input
-              type="text"
-              value={painType}
-              onChange={(e) => setPainType(e.target.value)}
-              placeholder="e.g., sharp, dull"
-              className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-            />
-          </label>
-          <label className="block">
-            <span className="text-gray-700 font-medium">Duration</span>
-            <input
-              type="text"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              placeholder="e.g., 2 days"
-              className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-            />
-          </label>
-          <label className="block">
-            <span className="text-gray-700 font-medium">Additional Symptoms</span>
-            <input
-              type="text"
-              value={additional}
-              onChange={(e) => setAdditional(e.target.value)}
-              placeholder="e.g., swelling"
-              className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-            />
-          </label>
-          <button
-            onClick={handleGetDiagnosis}
-            disabled={isLoading}
-            className={`w-full p-3 mt-4 text-white rounded-md ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-          >
-            {isLoading ? 'Loading...' : 'Get Diagnosis'}
-          </button>
-        </div>
-        {error && <p className="mt-4 text-red-600">{error}</p>}
+      <div className="w-2/5 p-6 m-4 border-2 border-gray-300 rounded-lg flex flex-col space-y-4">
+        <div className="text-gray-600 font-medium">Click on pain points</div>
+        <label className="block">
+          <span className="text-gray-600 font-medium">Body Part</span>
+          <input
+            type="text"
+            value={selectedPart.replace(/_/g, ' ')}
+            readOnly
+            placeholder="Click model to select"
+            className="mt-2 w-full p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
+          />
+        </label>
+        <label className="block">
+          <span className="text-gray-600 font-medium">Pain Type</span>
+          <input
+            type="text"
+            value={painType}
+            onChange={(e) => setPainType(e.target.value)}
+            placeholder="e.g., sharp, dull"
+            className="mt-2 w-full p-3 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
+          />
+        </label>
+        <label className="block">
+          <span className="text-gray-600 font-medium">Duration</span>
+          <input
+            type="text"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            placeholder="e.g., 2 days"
+            className="mt-2 w-full p-3 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
+          />
+        </label>
+        <label className="block">
+          <span className="text-gray-600 font-medium">Additional Symptoms</span>
+          <input
+            type="text"
+            value={additional}
+            onChange={(e) => setAdditional(e.target.value)}
+            placeholder="e.g., swelling"
+            className="mt-2 w-full p-3 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
+          />
+        </label>
+        <label className="block">
+          <span className="text-gray-600 font-medium">Extra details (symptoms)</span>
+          <textarea
+            value={extraDetails}
+            onChange={(e) => setExtraDetails(e.target.value)}
+            placeholder="e.g., swelling, redness"
+            className="mt-2 w-full p-3 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition h-16 resize-none"
+          />
+        </label>
+        <button
+          onClick={handleNext}
+          disabled={isLoading}
+          className={`w-full p-3 mt-4 text-white rounded-lg font-medium transition-all duration-300 ${
+            isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
+          }`}
+        >
+          {isLoading ? 'Loading...' : 'Next'}
+        </button>
+        {error && <p className="mt-2 text-red-600 font-medium">{error}</p>}
       </div>
     </div>
   );

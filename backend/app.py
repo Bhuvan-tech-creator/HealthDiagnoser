@@ -17,6 +17,7 @@ BODY_PART_MAPPING = {
     "left_elbow": "left elbow (lateral epicondyle)",
     "right_knee": "right knee (patellar region)",
     "left_shoulder": "left shoulder (glenohumeral joint)",
+    "upper_arm": "upper arm (biceps/triceps region)",
 }
 
 @app.route('/diagnose', methods=['POST'])
@@ -38,18 +39,34 @@ def diagnose():
         logger.debug("Processing diagnosis for body part: %s", body_part)
 
         prompt = f"""
-        As a medical expert, analyze:
-        - Exact location: {body_part}
+        You are a medical expert tasked with providing a detailed and accurate diagnosis based on the following patient information:
+        - Pain location: {body_part}
         - Pain type: {data.get('painType', 'unspecified')}
         - Duration: {data.get('duration', 'unknown')}
         - Additional symptoms: {data.get('additional', 'none')}
+        - Extra details: {data.get('extraDetails', 'none')}
 
-        Provide a response in the following JSON format:
+        Important instructions:
+        - Consider ALL provided details (pain location, pain type, duration, additional symptoms, extra details) in utmost detail before making a diagnosis.
+        - Ensure the diagnosis is anatomically accurate for the specified pain location. For example:
+          - If the pain is in the upper arm (biceps/triceps region), suggest conditions like muscle strain, tendinitis, or overuse injury. Do NOT suggest shoulder-specific conditions like Shoulder Bursitis unless the pain location is explicitly the shoulder.
+          - If the pain is in the left elbow, suggest conditions like lateral epicondylitis (tennis elbow) or medial epicondylitis (golfer's elbow).
+        - Analyze every piece of information thoroughly to avoid random or inaccurate diagnoses.
+        - Provide possible diagnoses in order from MOST LIKELY to LEAST LIKELY, clearly numbering each possibility (e.g., 1. Condition A, 2. Condition B).
+        - For each diagnosis, provide actionable recommendations suitable for a general audience.
+
+        Example:
+        - Input: Dull pain in the upper arm for 2 days, no additional symptoms.
+        - Expected Output: 
+          - Diagnosis: "1. Muscle strain, 2. Biceps tendinitis"
+          - Recommendations: "For Muscle strain: Rest the arm, apply ice for 15 minutes every few hours, and avoid heavy lifting. For Biceps tendinitis: Rest, apply heat, and consider gentle stretching after a few days."
+
+        Return your response in the following JSON format:
         {{
-          "diagnosis": "The most likely condition is [condition].",
-          "recommendations": "To address this condition, consider: [list actionable steps]."
+          "diagnosis": "1. [Most likely condition], 2. [Second most likely condition], ...",
+          "recommendations": "For [condition 1]: [steps]. For [condition 2]: [steps]. ..."
         }}
-        Ensure the recommendations are practical, safe, and suitable for a general audience.
+        Ensure the recommendations are practical, safe, and suitable for non-medical users.
         """
 
         headers = {
@@ -61,7 +78,7 @@ def diagnose():
             "model": "mistralai/mistral-7b-instruct:free",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7,
-            "max_tokens": 300
+            "max_tokens": 500
         }
 
         logger.debug("Sending request to OpenRouter API")
@@ -74,7 +91,7 @@ def diagnose():
 
         if response.status_code != 200:
             logger.error("OpenRouter API failed: %s %s", response.status_code, response.text)
-            return jsonify({"error": f"OpenRouter API failed: {response.status_code} {response.text}"}), 500
+            return jsonify({"error": f"OpenRouter API failed: ${response.status_code} ${response.text}"}), 500
 
         result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
         if not result:
@@ -103,7 +120,7 @@ def diagnose():
 
     except Exception as e:
         logger.error("Unexpected error: %s", str(e), exc_info=True)
-        return jsonify({"error": f"Server error: {str(e)}"}), 500
+        return jsonify({"error": f"Server error: ${str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
