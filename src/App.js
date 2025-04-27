@@ -69,7 +69,7 @@ function Home() {
         followUpAnswer: followUpAnswer || 'unspecified',
       };
       console.log('Sending diagnosis request:', payload);
-      const response = await fetch('http://localhost:5000/diagnose', {
+      const response = await fetch('/diagnose', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,14 +101,15 @@ function Home() {
 
   return (
     <div className="flex flex-row w-screen h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="w-2/5 h-full border-2 border-gray-200 rounded-lg m-2 shadow-sm">
+      <div className="w-2/5 h-full flex flex-col items-center border-2 border-gray-200 rounded-lg m-2 shadow-sm">
         <div className="text-center text-gray-700 font-semibold text-lg mt-1">BODY</div>
         <Canvas
           ref={canvasRef}
-          camera={{ position: [0, 0, 10], fov: 50, near: 0.1, far: 100 }}
+          camera={{ position: [0, 1, 6], fov: 50, near: 0.1, far: 100 }}
           gl={{ antialias: true }}
           shadows
           onCreated={() => console.log('Canvas initialized')}
+          style={{ width: '100%', height: '100%' }}
         >
           <color attach="background" args={['#808080']} />
           <ambientLight intensity={0.8} />
@@ -119,7 +120,7 @@ function Home() {
             enableZoom={true}
             enablePan={false}
             enableRotate={true}
-            target={[0, 0, 0]}
+            target={[0, 1, 0]}
             minDistance={2}
             maxDistance={15}
           />
