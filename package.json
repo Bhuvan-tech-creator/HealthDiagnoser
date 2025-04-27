@@ -3,24 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@react-three/drei": "^9.17.3",
-    "@react-three/fiber": "^8.0.27",
+    "@react-three/drei": "^9.82.1",
+    "@react-three/fiber": "^8.14.0",
+    "http-proxy-middleware": "^3.0.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.3.0",
-    "three": "^0.141.0"
+    "three": "^0.155.0",
+    "three-mesh-bvh": "^0.5.15"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [
@@ -35,7 +31,9 @@
     ]
   },
   "devDependencies": {
-    "react-scripts": "5.0.1",
+    "customize-cra": "^1.0.0",
+    "react-app-rewired": "^2.2.1",
+    "react-scripts": "^5.0.1",
     "tailwindcss": "^3.1.4"
   }
 }

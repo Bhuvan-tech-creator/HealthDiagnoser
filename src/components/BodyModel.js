@@ -3,61 +3,50 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
 function Model({ setError, onPartClick, selectedParts }) {
-  const [model, setModel] = useState(null);
   const [highlightedMeshes, setHighlightedMeshes] = useState(new Set());
   const originalMaterials = useRef(new Map());
 
-  useEffect(() => {
-    const loadModel = async () => {
-      try {
-        console.log('Attempting to fetch model from /assets/models/body-model.glb');
-        const response = await fetch('/assets/models/body-model.glb', {
-          cache: 'no-store',
-        });
-        if (!response.ok) {
-          throw new Error(`Fetch failed: ${response.status} ${response.statusText}`);
-        }
-        console.log('Fetch successful, loading GLTF...');
-        const gltf = await useGLTF('/assets/models/body-model.glb');
-        console.log('Model loaded:', gltf);
-        console.log('Scene children:', gltf.scene.children.map(child => child.name));
+  // Load the GLTF model directly using useGLTF
+  let gltf;
+  try {
+    gltf = useGLTF('/assets/models/body-model.glb');
+    console.log('Model loaded:', gltf);
+    console.log('Scene children:', gltf.scene.children.map(child => child.name));
+  } catch (err) {
+    console.error('Model loading error:', err);
+    setError(`Failed to load model: ${err.message}`);
+    return (
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[0.5, 0.5, 0.5]} />
+        <meshStandardMaterial color="red" />
+      </mesh>
+    );
+  }
 
-        // Apply scale first
-        gltf.scene.scale.set(3, 3, 3); // Adjusted for visibility
-        gltf.scene.rotation.set(0, 0, 0);
+  // Configure the model
+  gltf.scene.scale.set(3, 3, 3);
+  gltf.scene.rotation.set(0, 0, 0);
 
-        // Center the model after scaling
-        const box = new THREE.Box3().setFromObject(gltf.scene);
-        const center = box.getCenter(new THREE.Vector3());
-        gltf.scene.position.sub(center); // Center at origin
-        console.log('Model bounding box after centering:', box);
+  const box = new THREE.Box3().setFromObject(gltf.scene);
+  const center = box.getCenter(new THREE.Vector3());
+  gltf.scene.position.sub(center);
+  console.log('Model bounding box after centering:', box);
 
-        gltf.scene.traverse((child) => {
-          if (child.isMesh) {
-            console.log('Mesh:', child.name, 'Material:', child.material);
-            child.castShadow = true;
-            child.receiveShadow = true;
-            if (!child.material) {
-              child.material = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
-            }
-            // Store original material
-            originalMaterials.current.set(child, child.material.clone());
-          }
-        });
-        setModel(gltf);
-      } catch (err) {
-        console.error('Model loading error:', err);
-        setError(`Failed to load model: ${err.message}`);
+  gltf.scene.traverse((child) => {
+    if (child.isMesh) {
+      console.log('Mesh:', child.name, 'Material:', child.material);
+      child.castShadow = true;
+      child.receiveShadow = true;
+      if (!child.material) {
+        child.material = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
       }
-    };
-    loadModel();
-  }, [setError]);
+      originalMaterials.current.set(child, child.material.clone());
+    }
+  });
 
   useEffect(() => {
-    if (!model) return;
-
     const newHighlightedMeshes = new Set();
-    model.scene.traverse((child) => {
+    gltf.scene.traverse((child) => {
       if (child.isMesh) {
         const isSelected = selectedParts.includes(child.name);
         if (isSelected) {
@@ -72,7 +61,7 @@ function Model({ setError, onPartClick, selectedParts }) {
       }
     });
     setHighlightedMeshes(newHighlightedMeshes);
-  }, [selectedParts, model]);
+  }, [selectedParts, gltf.scene]);
 
   const handleMeshClick = (e) => {
     e.stopPropagation();
@@ -83,20 +72,10 @@ function Model({ setError, onPartClick, selectedParts }) {
     }
   };
 
-  if (!model) {
-    console.log('Rendering fallback cube...');
-    return (
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[0.5, 0.5, 0.5]} />
-        <meshStandardMaterial color="red" />
-      </mesh>
-    );
-  }
-
   return (
     <group>
       <primitive
-        object={model.scene}
+        object={gltf.scene}
         onClick={handleMeshClick}
       />
     </group>
