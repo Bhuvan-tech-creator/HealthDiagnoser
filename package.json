@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@react-three/drei": "^9.82.1",
-    "@react-three/fiber": "^8.14.0",
+    "@react-three/drei": "^9.105.6",
+    "@react-three/fiber": "^8.16.8",
     "http-proxy-middleware": "^3.0.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.3.0",
-    "three": "^0.155.0",
+    "react-router-dom": "^6.22.0",
+    "three": "^0.165.0",
     "three-mesh-bvh": "^0.5.15"
   },
   "scripts": {
